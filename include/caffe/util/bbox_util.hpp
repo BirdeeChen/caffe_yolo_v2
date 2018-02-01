@@ -165,6 +165,7 @@ class PredictionResult{
     Dtype classScore;
     Dtype confidence;
     int classType;
+    int batchID;
 };
 template <typename Dtype>
 void class_index_and_score(Dtype* input, int classes, PredictionResult<Dtype>& predict)
@@ -204,6 +205,38 @@ void get_region_box(Dtype* x, PredictionResult<Dtype>& predict, vector<Dtype> bi
   predict.w = exp(x[index + 2]) * biases[2*n] / w;
   predict.h = exp(x[index + 3]) * biases[2*n+1] / h;
 }
+
+template <typename Dtype>
+void ApplyNms(vector< PredictionResult<Dtype> >& boxes, vector<int>& idxes, Dtype threshold) {
+  idxes.clear();
+  for (int i = 0; i < boxes.size() - 1; ++i) {
+    if (boxes[i].objScore < 0.0)
+      continue;
+   
+    for (int j = i + 1; j < boxes.size(); ++j) {
+      if (boxes[j].objScore < 0.0)
+      	continue;
+      NormalizedBBox Bbox1, Bbox2;
+      setNormalizedBBox(Bbox1, boxes[i].x, boxes[i].y, boxes[i].w, boxes[i].h);
+      setNormalizedBBox(Bbox2, boxes[j].x, boxes[j].y, boxes[j].w, boxes[j].h);
+
+      float overlap = JaccardOverlap(Bbox1, Bbox2, true);
+
+      if (overlap >= threshold) {
+        if(boxes[i].objScore > boxes[j].objScore)
+			boxes[j].objScore = -1.0;
+		else
+			boxes[i].objScore = -1.0;
+      }
+    }
+  }
+	
+  for (int i = 0; i < boxes.size() - 1; ++i) {
+    if (boxes[i].objScore > 0.0)
+		idxes.push_back(i);
+  }
+}
+/*
 template <typename Dtype>
 void ApplyNms(vector< PredictionResult<Dtype> >& boxes, vector<int>& idxes, Dtype threshold) {
   map<int, int> idx_map;
@@ -232,7 +265,7 @@ void ApplyNms(vector< PredictionResult<Dtype> >& boxes, vector<int>& idxes, Dtyp
     }
   }
 }
-
+*/
 
 template <typename T>
 bool SortScorePairDescend(const pair<float, T>& pair1,

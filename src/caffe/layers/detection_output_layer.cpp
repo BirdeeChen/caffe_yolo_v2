@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <utility>
 
 #include "boost/filesystem.hpp"
 #include "boost/foreach.hpp"
@@ -89,20 +90,23 @@ void DetectionOutputLayer<Dtype>::Forward_cpu(
     //std::cout<<"5"<<std::endl;
     //*********************************************************Activation********************************************************//
     //disp(swap);
-  vector< PredictionResult<Dtype> > predicts;
-  PredictionResult<Dtype> predict;
-  predicts.clear(); 
+  vector< PredictionResult<Dtype> > results;
+  
   for (int b = 0; b < swap.num(); ++b){
+	vector< PredictionResult<Dtype> > predicts;
+    PredictionResult<Dtype> predict;
+	predicts.clear(); 
     for (int j = 0; j < side_; ++j)
       for (int i = 0; i < side_; ++i)
         for (int n = 0; n < num_box_; ++n){
           int index = b * swap.channels() * swap.height() * swap.width() + (j * side_ + i) * swap.height() * swap.width() + n * swap.width();
-          CHECK_EQ(swap_data[index],swap.data_at(b, j * side_ + i, n, 0));
-          get_region_box(swap_data, predict, biases_, n, index, i, j, side_, side_);
+          CHECK_EQ(swap_data[index],swap.data_at(b, j * side_ + i, n, 0));          
           predict.objScore = sigmoid(swap_data[index+4]);
           class_index_and_score(swap_data+index+5, num_classes_, predict);
           predict.confidence = predict.objScore * predict.classScore;
           if (predict.confidence >= confidence_threshold_){
+ 			get_region_box(swap_data, predict, biases_, n, index, i, j, side_, side_);
+			predict.batchID = b;
             predicts.push_back(predict);
           }
         }
@@ -111,14 +115,17 @@ void DetectionOutputLayer<Dtype>::Forward_cpu(
     if(predicts.size() > 0){
       ApplyNms(predicts, idxes, nms_threshold_);
       num_kept = idxes.size();
+	  for (int i = 0; i < num_kept; i++){
+	  	results.push_back(predicts[idxes[i]]);
+      }    
     }
-    vector<int> top_shape(2, 1);
-    top_shape.push_back(num_kept);
-    top_shape.push_back(7);
-
-    Dtype* top_data;
   
-  if (num_kept == 0) {
+  vector<int> top_shape(2, 1);
+  top_shape.push_back(results.size());
+  top_shape.push_back(7);
+
+  Dtype* top_data;
+  if (results.size() == 0) {
     LOG(INFO) << "Couldn't find any detections";
     top_shape[2] = swap.num();
     top[0]->Reshape(top_shape);
@@ -132,19 +139,18 @@ void DetectionOutputLayer<Dtype>::Forward_cpu(
   } else {
     top[0]->Reshape(top_shape);
     top_data = top[0]->mutable_cpu_data();
-    for (int i = 0; i < num_kept; i++){
-      top_data[i*7] = b;                              //Image_Id
-      top_data[i*7+1] = predicts[idxes[i]].classType; //label
-      top_data[i*7+2] = predicts[idxes[i]].confidence; //confidence
-      top_data[i*7+3] = predicts[idxes[i]].x;          
-      top_data[i*7+4] = predicts[idxes[i]].y;
-      top_data[i*7+5] = predicts[idxes[i]].w;
-      top_data[i*7+6] = predicts[idxes[i]].h;
+    for (int i = 0; i < results.size(); i++){
+	  PredictionResult<Dtype> & predict = results[i];
+      top_data[i*7] = predict.batchID;      //Image_Id
+      top_data[i*7+1] = predict.classType;  //label
+      top_data[i*7+2] = predict.confidence; //confidence
+      top_data[i*7+3] = predict.x;          
+      top_data[i*7+4] = predict.y;
+      top_data[i*7+5] = predict.w;
+      top_data[i*7+6] = predict.h;
     }
   }
-
   }
-
 }
 
 #ifdef CPU_ONLY

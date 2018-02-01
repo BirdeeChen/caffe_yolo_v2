@@ -2,8 +2,8 @@ name: "Darkent2Caffe"
 input: "data"
 input_dim: 1
 input_dim: 3
-input_dim: 608
-input_dim: 608
+input_dim: 416
+input_dim: 416
 
 layer {
     bottom: "data"
@@ -976,7 +976,7 @@ layer {
     type: "DetectionOutput"
     detection_output_param {
         classes: 80
-        confidence_threshold: 0.01
+        confidence_threshold: 0.2
         nms_threshold: 0.45
         biases: 0.57273
         biases: 0.677385
@@ -989,4 +989,17 @@ layer {
         biases: 9.77052
         biases: 9.16828
     }
+}
+
+layer {
+  name: "region1"
+  type: "Region"
+  bottom: "layer31-conv"
+  top: "region1"
+  region_param {
+    classes: 80
+    coords: 4
+    boxes_of_each_grid: 5
+    softmax: true
+  }
 }
