@@ -28,7 +28,7 @@ class Segmentation {
 	shared_ptr<cv::Mat> Classify(const cv::Mat& img);
 
  private:
-   const shared_ptr<Blob<float> > Predict(const cv::Mat& img);
+   Blob<float>* Predict(const cv::Mat& img);
    void WrapInputLayer(std::vector<cv::Mat>* input_channels);
    void Preprocess(const cv::Mat& img,
                      std::vector<cv::Mat>* input_channels);
@@ -82,7 +82,7 @@ Segmentation::Segmentation(const string& model_file,
 
 shared_ptr<cv::Mat> Segmentation::Classify(const cv::Mat& img) {
 	// Convert the caffe blog as CV Mat
-	const shared_ptr<Blob<float> > score_blob = Predict(img);
+	Blob<float> * score_blob = Predict(img);
 	float * score_data = score_blob->mutable_cpu_data();
 	std::vector<cv::Mat> channels;
 	// B,C,H,W order
@@ -115,7 +115,7 @@ shared_ptr<cv::Mat> Segmentation::Classify(const cv::Mat& img) {
 	return maskMat;
 }
 
-const shared_ptr<Blob<float> > Segmentation::Predict(const cv::Mat& img) {
+Blob<float> * Segmentation::Predict(const cv::Mat& img) {
   Blob<float>* input_layer = net_->input_blobs()[0];
   input_layer->Reshape(1, num_channels_,
                        input_geometry_.height, input_geometry_.width);
@@ -129,7 +129,8 @@ const shared_ptr<Blob<float> > Segmentation::Predict(const cv::Mat& img) {
 
   net_->Forward();
 
-  const shared_ptr<Blob<float> > score = net_->blob_by_name("conv_score");
+  //const shared_ptr<Blob<float> > score = net_->blob_by_name("conv_score");
+  Blob<float> * score = net_->output_blobs()[0];
   return score;
 }
 
