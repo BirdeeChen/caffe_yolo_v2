@@ -10,7 +10,7 @@
 ----------
 ## Step By Step How To 
 
-- ## Step 1     *Down load darknet \*.weight file [here(256M)][2]* 
+- ## Step 1     *Download darknet \*.weight file [here(256M)][2]* 
 
          wget https://pjreddie.com/media/files/yolo.weights
  
