@@ -44,12 +44,14 @@ def darknet2caffe(cfgfile, weightfile, protofile, caffemodel):
             else:
                 start = load_conv2caffe(buf, start, params[conv_layer_name])
             layer_id = layer_id+1
+            print "weight for ", conv_layer_name, " copied "
         elif block['type'] == 'connected':
             if block.has_key('name'):
                 fc_layer_name = block['name']
             else:
                 fc_layer_name = 'layer%d-fc' % layer_id
             start = load_fc2caffe(buf, start, params[fc_layer_name])
+            print "weight for ", fc_layer_name, " copied "
             layer_id = layer_id+1
         elif block['type'] == 'maxpool':
             layer_id = layer_id+1
@@ -68,6 +70,11 @@ def darknet2caffe(cfgfile, weightfile, protofile, caffemodel):
         else:
             print('unknow layer type %s ' % block['type'])
             layer_id = layer_id + 1
+            
+    if layer_id <= len(blocks):
+        for block in blocks[layer_id-1:]:
+            if block['type'] in [ 'convolutional','connected']:
+                print "No weight data left for ", block['type'], " layer"
     print('save prototxt to %s' % protofile)
     save_prototxt(net_info , protofile, region=True)
     print('save caffemodel to %s' % caffemodel)
