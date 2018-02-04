@@ -18,15 +18,18 @@ for name in ["VOC2007", "VOC2012"]:
     with open(file_path, 'r') as fp:
       for line in fp:
         line = line.strip()
-        trainval_jpeg_list.append(os.path.join(jpeg_fold, "{}.png".format(line)))
+        trainval_jpeg_list.append(os.path.join(jpeg_fold, "{}.jpg".format(line)))
         trainval_xml_list.append(os.path.join(xml_fold, "{}.xml".format(line)))
         if not os.path.exists(trainval_jpeg_list[-1]):
           print trainval_jpeg_list[-1], "not exist"
         if not os.path.exists(trainval_xml_list[-1]):
           print trainval_xml_list[-1], "not exist"
 
-  if name == "VOC2007":
-    file_path = os.path.join(txt_fold, "test.txt")
+  file_path = os.path.join(txt_fold, "test.txt")
+  if not os.path.exists(file_path):
+    print "test.txt for ", name, " not found, ignored and continue..."
+    continue
+  if name == "VOC2007":    
     with open(file_path, 'r') as fp:
       for line in fp:
         line = line.strip()
@@ -36,8 +39,7 @@ for name in ["VOC2007", "VOC2012"]:
           print test07_jpeg_list[-1], "not exist"
         if not os.path.exists(test07_xml_list[-1]):
           print test07_xml_list[-1], "not exist"
-  elif name == "VOC2012":
-    file_path = os.path.join(txt_fold, "test.txt")
+  elif name == "VOC2012":    
     with open(file_path, 'r') as fp:
       for line in fp:
         line = line.strip()
@@ -50,13 +52,18 @@ for name in ["VOC2007", "VOC2012"]:
 with open("trainval.txt", "w") as wr:
   for i in range(len(trainval_jpeg_list)):
     wr.write("{} {}\n".format(trainval_jpeg_list[i], trainval_xml_list[i]))
+  print "trainval.txt created successfully !"
 
 with open("test_2007.txt", "w") as wr:
   for i in range(len(test07_jpeg_list)):
     wr.write("{} {}\n".format(test07_jpeg_list[i], test07_xml_list[i]))
+  if len(test07_jpeg_list) > 0:
+    print "test_2007.txt created successfully !"
 
 with open("test_2012.txt", "w") as wr:
   for i in range(len(test12_jpeg_list)):
     wr.write("{} {}\n".format(test12_jpeg_list[i], test12_xml_list[i]))
+  if len(test12_jpeg_list) > 0:
+    print "test_2012.txt created successfully !"
 
 
