@@ -143,10 +143,15 @@ def cfg2prototxt(cfgfile):
             if block['pad'] == '1':
                 convolution_param['pad'] = str(int(convolution_param['kernel_size'])/2)
             convolution_param['stride'] = block['stride']
+            convolution_param['weight_filler'] = OrderedDict()
+            convolution_param['weight_filler']['type'] = 'xavier'
             if block['batch_normalize'] == '1':
                 convolution_param['bias_term'] = 'false'
             else:
                 convolution_param['bias_term'] = 'true'
+                convolution_param['bias_filler'] = OrderedDict()
+                convolution_param['bias_filler']['type'] = 'constant'
+                convolution_param['bias_filler']['value'] = 0.2
             conv_layer['convolution_param'] = convolution_param
             layers.append(conv_layer)
             bottom = conv_layer['top']

@@ -8,6 +8,7 @@ import matplotlib.image as mpimg
 sys.path.insert(0, '../python/')
 import caffe
 #caffe.set_device(0)
+#caffe.set_mode_gpu()
 caffe.set_mode_cpu()
 
 mean = np.require([104, 117, 123], dtype=np.float32)[:, np.newaxis, np.newaxis]

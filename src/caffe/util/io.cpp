@@ -182,12 +182,18 @@ bool ReadBoxDataToDatum(const string& filename, const string& annoname,
                       buf.size()));
       datum->set_encoded(true);
       // read xml anno data
-      ParseXmlToDatum(annoname, label_map, ori_w, ori_h, datum);
+      if(!annoname.empty())
+    	  ParseXmlToDatum(annoname, label_map, ori_w, ori_h, datum);
+      else
+          LOG(WARNING) << "No label XML defined for " << filename;
       return true;
     }
     CVMatToDatum(cv_img, datum);
     // read xml anno data
-    ParseXmlToDatum(annoname, label_map, ori_w, ori_h, datum);
+    if(!annoname.empty())
+      ParseXmlToDatum(annoname, label_map, ori_w, ori_h, datum);
+    else
+      LOG(WARNING) << "No label XML defined for " << filename;
     return true;
   } else {
     return false;
@@ -206,15 +212,18 @@ int name_to_label(const string& name, const map<string, int>& label_map) {
 void ParseXmlToDatum(const string& annoname, const map<string, int>& label_map,
     int ori_w, int ori_h, Datum* datum) {
   ptree pt;
-  read_xml(annoname, pt);
-  int width(0), height(0);
   try {
+    read_xml(annoname, pt);
+    int width(0), height(0);
+
     height = pt.get<int>("annotation.size.height");
     width = pt.get<int>("annotation.size.width");
     CHECK_EQ(ori_w, width);
     CHECK_EQ(ori_h, height);
   } catch (const ptree_error &e) {
     LOG(WARNING) << "When paring " << annoname << ": " << e.what();
+  } catch (...) {
+	 LOG(WARNING) << "cannot open file " <<   annoname;
   }
   datum->clear_float_data();
   BOOST_FOREACH(ptree::value_type &v1, pt.get_child("annotation")) {

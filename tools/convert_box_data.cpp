@@ -45,6 +45,16 @@ DEFINE_string(encode_type, "jpg",
 DEFINE_string(label_file, "",
     "a map from name to label");
 
+inline static std::string& trim(std::string& text)
+{
+  if(!text.empty())
+  {
+    text.erase(0, text.find_first_not_of(" \n\r\t"));
+    text.erase(text.find_last_not_of(" \n\r\t") + 1);
+  }
+  return text;
+}
+
 int main(int argc, char** argv) {
 #ifdef USE_OPENCV
   ::google::InitGoogleLogging(argv[0]);
@@ -92,8 +102,12 @@ int main(int argc, char** argv) {
   std::string line;
   size_t pos;
   while (std::getline(infile, line)) {
+	line = trim(line);
     pos = line.find_last_of(' ');
-    lines.push_back(std::make_pair(line.substr(0, pos), line.substr(pos+1)));
+    if(pos != string::npos)
+    	lines.push_back(std::make_pair(line.substr(0, pos), line.substr(pos+1)));
+    else
+    	lines.push_back(std::make_pair(line.substr(0, pos), std::string("")));
   }
   if (FLAGS_shuffle) {
     // randomly shuffle data
@@ -133,8 +147,8 @@ int main(int argc, char** argv) {
       std::transform(enc.begin(), enc.end(), enc.begin(), ::tolower);
     }
     status = ReadBoxDataToDatum(root_folder + lines[line_id].first,
-        root_folder + lines[line_id].second, label_map,
-        resize_height, resize_width, is_color, enc, &datum);
+    	lines[line_id].second.empty() ? "" : root_folder + lines[line_id].second,
+    	label_map, resize_height, resize_width, is_color, enc, &datum);
     if (status == false) continue;
     if (check_size) {
       if (!data_size_initialized) {
