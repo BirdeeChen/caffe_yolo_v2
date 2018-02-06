@@ -177,12 +177,12 @@ void BoxDataLayer<Dtype>::transform_label(int count, Dtype* top_label,
     // LOG(INFO) << "x: " << x << " y: " << y;    
     
     int cor_index = i * 5 ;
-    int class_index = cor_index + 4;
+    int class_index = cor_index + 1;
     
     // LOG(INFO) << "dif_index: " << dif_index << " class_label: " << class_label;
     top_label[class_index] = class_label;
     for (int j = 0; j < 4; ++j) {
-      top_label[cor_index + j] = box_labels[i].box_[j];
+      top_label[class_index + j] = box_labels[i].box_[j];
     }
   }
 }

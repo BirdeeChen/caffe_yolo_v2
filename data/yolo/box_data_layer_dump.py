@@ -43,10 +43,10 @@ def parse_result(out_blobs, i):
   image = np.transpose(image, (1, 2, 0)).astype(np.uint8).copy()
   width, height, _ = image.shape
   boxes = out_blobs["label"][i].reshape((-1,5))
-  boxes[:, 0] *= width
-  boxes[:, 1] *= height
-  boxes[:, 2] *= width
-  boxes[:, 3] *= height
+  boxes[:, 1] *= width
+  boxes[:, 2] *= height
+  boxes[:, 3] *= width
+  boxes[:, 4] *= height
   return image, boxes
 
   #print box_values
@@ -57,12 +57,12 @@ def parse_result(out_blobs, i):
 
 def show_boxes(image, boxes):
   for box in boxes:
-    if box[0] <= 0.0:
+    if box[1] <= 0.0:
       break
-    x1 = int(box[0])
-    y1 = int(box[1])
-    x2 = int(x1 + box[2])
-    y2 = int(y1 + box[3])
+    x1 = int(box[1])
+    y1 = int(box[2])
+    x2 = int(x1 + box[3])
+    y2 = int(y1 + box[4])
     cv2.rectangle(image, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
   cv2.imshow("out", image)
