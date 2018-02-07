@@ -133,6 +133,7 @@ int main(int argc, char** argv) {
   int count = 0;
   int data_size = 0;
   bool data_size_initialized = false;
+  int sum_labels = 0, max_labels = 0;
 
   for (int line_id = 0; line_id < lines.size(); ++line_id) {
     bool status;
@@ -174,12 +175,19 @@ int main(int argc, char** argv) {
       txn.reset(db->NewTransaction());
       LOG(INFO) << "Processed " << count << " files.";
     }
+
+    // Record label count
+    int labels = datum.float_data_size() / 5;
+    sum_labels += labels;
+    if( labels > max_labels )
+    	max_labels = labels;
   }
   // write the last batch
   if (count % 1000 != 0) {
     txn->Commit();
     LOG(INFO) << "Processed " << count << " files.";
   }
+  LOG(INFO) << "Finished : " << sum_labels << " labels in total. " << max_labels << " labels at most in one sample";
 #else
   LOG(FATAL) << "This tool requires OpenCV; compile with USE_OPENCV.";
 #endif  // USE_OPENCV
