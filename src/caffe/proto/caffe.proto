@@ -444,6 +444,7 @@ message RegionLossParameter{
   repeated float biases = 16;
   optional string softmax_tree = 17;
   optional string class_map = 18;
+  optional uint32 num_label = 19 [default = 30];
 }
 
 message ReorgParameter {
@@ -754,6 +755,7 @@ message DataParameter {
   optional uint32 prefetch = 10 [default = 4];
 
   repeated uint32 side = 11;
+  optional uint32 num_label = 12 [default = 30];
 }
 
 message DropoutParameter {

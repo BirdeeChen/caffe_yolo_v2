@@ -63,14 +63,15 @@ Dtype delta_region_box(vector<Dtype> truth, Dtype* x, vector<Dtype> biases, int 
   pred = get_region_box(x, biases, n, index, i, j, w, h);
         
   float iou = Calc_iou(pred, truth);
-  //LOG(INFO) << pred[0] << "," << pred[1] << "," << pred[2] << "," << pred[3] << ";"<< truth[0] << "," << truth[1] << "," << truth[2] << "," << truth[3];
   float tx = truth[0] * w - i; //0.5
   float ty = truth[1] * h - j; //0.5
   float tw = log(truth[2] * w / biases[2*n]); //truth[2]=biases/w tw = 0
   float th = log(truth[3] * h / biases[2*n + 1]); //th = 0
-	
-  delta[index + 0] =(-1) * scale * (tx - sigmoid(x[index + 0])) * sigmoid(x[index + 0]) * (1 - sigmoid(x[index + 0]));
-  delta[index + 1] =(-1) * scale * (ty - sigmoid(x[index + 1])) * sigmoid(x[index + 1]) * (1 - sigmoid(x[index + 1]));
+
+  float pred_x = sigmoid(x[index + 0]);
+  float pred_y = sigmoid(x[index + 1]);
+  delta[index + 0] =(-1) * scale * (tx - pred_x) * pred_x * (1 - pred_x);
+  delta[index + 1] =(-1) * scale * (ty - pred_y) * pred_y * (1 - pred_y);
   delta[index + 2] =(-1) * scale * (tw - x[index + 2]);
   delta[index + 3] =(-1) * scale * (th - x[index + 3]);
   return iou;
@@ -127,6 +128,7 @@ void RegionLossLayer<Dtype>::LayerSetUp(
   
   side_ = param.side(); //13
   bias_match_ = param.bias_match(); //
+  num_label_ = param.num_label(); // 30
   num_class_ = param.num_class(); //20
   coords_ = param.coords(); //4
   num_ = param.num(); //5
@@ -177,7 +179,7 @@ void RegionLossLayer<Dtype>::LayerSetUp(
   int label_count = bottom[1]->count(1); //30*5
   // outputs: classes, iou, coordinates
   int tmp_input_count = side_ * side_ * num_ * (coords_ + num_class_ + 1); //13*13*5*(20+4+1) label: isobj, class_label, coordinates
-  int tmp_label_count = 30 * num_;
+  int tmp_label_count = num_label_ * num_;
   CHECK_EQ(input_count, tmp_input_count);
   CHECK_EQ(label_count, tmp_label_count);
 }
@@ -194,20 +196,17 @@ void RegionLossLayer<Dtype>::Reshape(
 template <typename Dtype>
 void RegionLossLayer<Dtype>::Forward_cpu(
   const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
-  //const Dtype* input_data = bottom[0]->cpu_data();
-  //std::cout<<"1"<<std::endl;
+
   const Dtype* label_data = bottom[1]->cpu_data(); //[label,x,y,w,h]
-  //std::cout<<"2"<<std::endl;
+
   Dtype* diff = diff_.mutable_cpu_data();
   caffe_set(diff_.count(), Dtype(0.0), diff);
-  //std::cout<<"3"<<std::endl;
   Dtype avg_anyobj(0.0), avg_obj(0.0), avg_iou(0.0), avg_cat(0.0), recall(0.0), loss(0.0);
   int count = 0;
   int class_count = 0;
   //*********************************************************Reshape********************************************************//
   Blob<Dtype> swap;
   swap.Reshape(bottom[0]->num(), bottom[0]->height()*bottom[0]->width(), num_, bottom[0]->channels() / num_);
-  //std::cout<<"4"<<std::endl;  
 
   Dtype* swap_data = swap.mutable_cpu_data();
   int index = 0;
@@ -219,22 +218,18 @@ void RegionLossLayer<Dtype>::Forward_cpu(
           swap_data[index++] = bottom[0]->data_at(b,c,h,w);	
         }
     
-    //CHECK_EQ(bottom[0]->data_at(0,4,1,2),swap.data_at(0,15,0,4));
-    //std::cout<<"5"<<std::endl;
-    //*********************************************************Activation********************************************************//
-    //disp(swap);
-    
+  //*********************************************************Activation********************************************************//
+
   for (int b = 0; b < swap.num(); ++b)
     for (int c = 0; c < swap.channels(); ++c)
       for (int h = 0; h < swap.height(); ++h)
       {
         int index = b * swap.channels() * swap.height() * swap.width() + c * swap.height() * swap.width() + h * swap.width() + 4;
         swap_data[index] = sigmoid(swap_data[index]);
-
-        CHECK_GE(swap_data[index], 0);
+        if(h == 0)
+          CHECK_GE(swap_data[index], 0);
       }
    
-   //std::cout<<"6"<<std::endl;
   if (softmax_tree_ != ""){
     for (int b = 0; b < swap.num(); ++b)
       for (int c = 0; c < swap.channels(); ++c)
@@ -250,27 +245,27 @@ void RegionLossLayer<Dtype>::Forward_cpu(
         for (int h = 0; h < swap.height(); ++h)
         {
           int index = b * swap.channels() * swap.height() * swap.width() + c * swap.height() * swap.width() + h * swap.width() + 5;
-
           softmax_region(swap_data+index, num_class_);
-          for (int i = 0; i < num_class_; ++i)
-          CHECK_GE(swap_data[index + i], 0);
+
+          if(h == 0) {
+            for (int i = 0; i < num_class_; ++i)
+              CHECK_GE(swap_data[index + i], 0);
+          }
         }
   }
-    //std::cout<<"7"<<std::endl;
-    //disp(swap);
-    //LOG(INFO) << "data ok!";
-    //*********************************************************Diff********************************************************//
+
+  //*********************************************************Diff********************************************************//
   int best_num = 0;
   for (int b = 0; b < swap.num(); ++b){
     if (softmax_tree_ != ""){
       int onlyclass = 0;
-      for (int t = 0; t < 30; ++t){
+      for (int t = 0; t < num_label_; ++t){
         vector<Dtype> truth;
-        Dtype x = label_data[b * 30 * 5 + t * 5 + 1];
-        Dtype y = label_data[b * 30 * 5 + t * 5 + 2];
+        Dtype x = label_data[b * num_label_ * 5 + t * 5 + 1];
+        Dtype y = label_data[b * num_label_ * 5 + t * 5 + 2];
         if (!x) break;
 
-        int class_label = label_data[b * 30 * 5 + t * 5 + 0];
+        int class_label = label_data[b * num_label_ * 5 + t * 5 + 0];
         float maxp = 0;
         int maxi = 0;
         if (x > 100000 && y > 100000){
@@ -295,23 +290,22 @@ void RegionLossLayer<Dtype>::Forward_cpu(
           break;
         }
       }
-      //LOG(INFO)<< "tree ok";
       if (onlyclass) continue;
     }
     for (int j = 0; j < side_; ++j)
       for (int i = 0; i < side_; ++i)
         for (int n = 0; n < num_; ++n){
           int index = b * swap.channels() * swap.height() * swap.width() + (j * side_ + i) * swap.height() * swap.width() + n * swap.width();
-          CHECK_EQ(swap_data[index],swap.data_at(b, j * side_ + i, n, 0));
-          //std::cout<<index<<std::endl;
+          //CHECK_EQ(swap_data[index],swap.data_at(b, j * side_ + i, n, 0));
+
           vector<Dtype> pred = get_region_box(swap_data, biases_, n, index, i, j, side_, side_);
           float best_iou = 0;
-          for (int t = 0; t < 30; ++t){
+          for (int t = 0; t < num_label_; ++t){
             vector<Dtype> truth;
-            Dtype x = label_data[b * 30 * 5 + t * 5 + 1];
-            Dtype y = label_data[b * 30 * 5 + t * 5 + 2];
-            Dtype w = label_data[b * 30 * 5 + t * 5 + 3];
-            Dtype h = label_data[b * 30 * 5 + t * 5 + 4];
+            Dtype x = label_data[b * num_label_ * 5 + t * 5 + 1];
+            Dtype y = label_data[b * num_label_ * 5 + t * 5 + 2];
+            Dtype w = label_data[b * num_label_ * 5 + t * 5 + 3];
+            Dtype h = label_data[b * num_label_ * 5 + t * 5 + 4];
 
             if (!x) break;
             truth.push_back(x);
@@ -320,17 +314,15 @@ void RegionLossLayer<Dtype>::Forward_cpu(
             truth.push_back(h);
             Dtype iou = Calc_iou(pred, truth);
             if (iou > best_iou) best_iou = iou;
-            //if (i + j + n == 0)
-            //	LOG(INFO)<<"label,x,y,w,h=["<< label_data[t * 5 + 0] << ","<< x << " " << y << " " << w << " " << h <<"]";
           }
-          //std::cout<<"anyobj:"<<swap_data[index+4];
+
           avg_anyobj += swap_data[index + 4];
           diff[index + 4] = -1 * noobject_scale_ * (0 - swap_data[index + 4]) * (swap_data[index + 4]) * (1 - swap_data[index + 4]);
-          //std::cout<<"diff:"<<diff[index+4]<<std::endl;
+
           if (best_iou > thresh_){
             best_num ++;
             diff[index + 4] = 0;
-            // LOG(INFO)<<"best_iou: "<<best_iou<<" index:"<<index;
+
           }
           if (iter < 12800 / bottom[0]->num()){
             vector<Dtype> truth;
@@ -342,19 +334,15 @@ void RegionLossLayer<Dtype>::Forward_cpu(
             delta_region_box(truth, swap_data, biases_, n, index, i, j, side_, side_, diff, .01);
           }
         }
-    //std::cout<<"2####"<<index<<std::endl;    
-    //std::cout<<"best_num:"<<best_num<<std::endl;
-    //LOG(INFO) << "obj ok"; 
-    for (int t = 0; t < 30; ++t){
+    for (int t = 0; t < num_label_; ++t){
       vector<Dtype> truth;
       truth.clear();
-      int class_label = label_data[t * 5 + b * 30 * 5 + 0];
-      float x = label_data[t * 5 + b * 30 * 5 + 1];
-      float y = label_data[t * 5 + b * 30 * 5 + 2];
-      float w = label_data[t * 5 + b * 30 * 5 + 3];
-      float h = label_data[t * 5 + b * 30 * 5 + 4];	
-            //LOG(INFO) << x << " " << y << " " << w << " " << h;
-      if (!w) break;					
+      int class_label = label_data[t * 5 + b * num_label_ * 5 + 0];
+      float x = label_data[t * 5 + b * num_label_ * 5 + 1];
+      float y = label_data[t * 5 + b * num_label_ * 5 + 2];
+      float w = label_data[t * 5 + b * num_label_ * 5 + 3];
+      float h = label_data[t * 5 + b * num_label_ * 5 + 4];
+      if (!w) break;
       truth.push_back(x);
       truth.push_back(y);
       truth.push_back(w);
@@ -372,19 +360,17 @@ void RegionLossLayer<Dtype>::Forward_cpu(
       truth_shift.push_back(0);
       truth_shift.push_back(w);
       truth_shift.push_back(h);
-      //std::cout<<"3####"<<std::endl;
+
       int size = coords_ + num_class_ + 1; //4 + 20 + 1
 
       for (int n = 0; n < num_; ++ n){ //search 5 anchor in i,j
         int index = b * bottom[0]->count(1) + pos * size * num_ + n * size;
-        //std::cout<<"#########1"<<index<<std::endl;
-        //int index = 25 * (j * side_ * 5 + i * 5 + n) + b * bottom[0]->count(); //25 * (j * 13 * 5 + i * 5 + n)
         vector<Dtype> pred = get_region_box(swap_data, biases_, n, index, i, j, side_, side_); //
         if (bias_match_){
           pred[2] = biases_[2 * n] / side_;
           pred[3] = biases_[2 * n + 1] / side_;
         }
-        //std::cout<<"#########2"<<index<<std::endl;
+
         pred[0] = 0;
         pred[1] = 0;
         float iou = Calc_iou(pred, truth_shift);
@@ -393,47 +379,26 @@ void RegionLossLayer<Dtype>::Forward_cpu(
           best_iou = iou;
           best_n = n;
         }
-        //std::cout<<"#########3"<<index<<std::endl;
       }
-      //LOG(INFO) << "iou ok";
-          //std::cout<<"best_n:"<<best_n<<" best_iou:"<<best_iou<<std::endl;
-      //std::cout<<"4####"<<std::endl;
-      //LOG(INFO)<<"2_t:"<<t<<" best_iou:"<<best_iou;
+
       float iou = delta_region_box(truth, swap_data, biases_, best_n, best_index, i, j, side_, side_, diff, coord_scale_);
-      //LOG(INFO) << "iou:" << iou;	
+
       if (iou > 0.5)recall += 1;
       avg_iou += iou;
-      //std::cout<<"obj"<<swap_data[best_index+4]<<std::endl;
       avg_obj += swap_data[best_index + 4];
-          //LOG(INFO)<<"avg_obj:"<<avg_obj;
       diff[best_index + 4] = (-1.0) * object_scale_ * (1 - swap_data[best_index + 4]) * (swap_data[best_index + 4] * (1 - swap_data[best_index + 4]));
-      //if (rescore)
-      //std::cout<<"diff:"<<diff[best_index+4]<<std::endl;
-      //LOG(INFO) << best_index << " " << best_n;
 
-      //if (l.map) class_label = l.map;
-      //LOG(INFO) << "cls_label: " << class_label;
-          
       if (class_map_ != "") class_label = cls_map_[class_label];	
       delta_region_class(swap_data, diff, best_index + 5, class_label, num_class_, softmax_tree_, &t_, class_scale_, &avg_cat); //softmax_tree_
 
-      //std::cout<<"###################real diff#################"<<std::endl;		
-      //for (int i = 0; i < num_class_; i ++)
-      //	std::cout<<diff[best_index+5+i]<<",";
-      //std::cout<<std::endl;
-      //LOG(INFO) << "class ok";
       ++count;
       ++class_count;	
     }
-     // std::cout<<"5####"<<std::endl;
   }
-  //std::cout<<"8"<<std::endl;
-  //caffe_set(diff_.count(), Dtype(0.0), diff);
-  diff_.Reshape(bottom[0]->num(), bottom[0]->height()*bottom[0]->width(), num_, bottom[0]->channels() / num_);
-  //disp(diff_);
 
-  Dtype* real_diff = real_diff_.mutable_cpu_data();    
-  //std::cout<<"9"<<std::endl;
+  diff_.Reshape(bottom[0]->num(), bottom[0]->height()*bottom[0]->width(), num_, bottom[0]->channels() / num_);
+
+  Dtype* real_diff = real_diff_.mutable_cpu_data();
   int sindex = 0;
 
   for (int b = 0; b < real_diff_.num(); ++b)
@@ -442,26 +407,16 @@ void RegionLossLayer<Dtype>::Forward_cpu(
         for (int c = 0; c < real_diff_.channels(); ++c)
         {
           int rindex = b * real_diff_.height() * real_diff_.width() * real_diff_.channels() + c * real_diff_.height() * real_diff_.width() + h * real_diff_.width() + w;
-          Dtype e = diff[sindex];
-          //Dtype e = 1;
-          //std::cout<<"index: "<< rindex <<" sindex: "<<sindex<<", "<<e<<std::endl;
-          real_diff[rindex] = e;
+          real_diff[rindex] = diff[sindex];
           sindex++;
         }
-
-  //std::cout<<"10"<<std::endl;
-  //disp(real_diff_);
-  //LOG(INFO) << avg_anyobj;	
-  // LOG(INFO) << swap.shape_string();
-  //LOG(INFO) << bottom[1]->shape_string();
-  // LOG(INFO) << bottom[0]->count();
-
+/*
   for (int i = 0; i < real_diff_.count(); ++i)
-  {
     loss += real_diff[i] * real_diff[i];
-  }
+*/
+  caffe_mul<Dtype>(real_diff_.count(), real_diff, real_diff, real_diff);
+  loss = caffe_cpu_asum<Dtype>(real_diff_.count(), real_diff);
   top[0]->mutable_cpu_data()[0] = loss;
-  //LOG(INFO) << "avg_noobj: " << avg_anyobj / (side_ * side_ * num_ * bottom[0]->num());	
   iter ++;
   //LOG(INFO) << "iter: " << iter <<" loss: " << loss;
   if (!(iter % 100))
@@ -481,8 +436,6 @@ void RegionLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   if (propagate_down[0]) {
     const Dtype sign(1.);
     const Dtype alpha = sign * top[0]->cpu_diff()[0] / bottom[0]->num();
-    //const Dtype alpha(1.0);
-    //LOG(INFO) << "alpha:" << alpha;
     
     caffe_cpu_axpby(
         bottom[0]->count(),

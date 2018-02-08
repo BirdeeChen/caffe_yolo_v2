@@ -32,6 +32,7 @@ void BoxDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
   this->box_label_ = true;
   const DataParameter param = this->layer_param_.data_param();
   const int batch_size = param.batch_size();
+  const int num_label = param.num_label();
   // Read a data point, and use it to initialize the top blob.
   Datum datum;
   datum.ParseFromString(cursor_->value());
@@ -63,7 +64,7 @@ void BoxDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
     for (int i = 0; i < this->prefetch_.size(); ++i) {
       this->prefetch_[i]->multi_label_.clear(); 
     }
-    int maxLables = 30;
+    int maxLables = num_label;
     for (int i = 0; i < sides_.size(); ++i) {
       vector<int> label_shape(1, batch_size);
       int label_size = maxLables * (1 + 4);

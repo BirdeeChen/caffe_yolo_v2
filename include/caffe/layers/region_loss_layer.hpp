@@ -73,6 +73,7 @@ class RegionLossLayer : public LossLayer<Dtype> {
   
   int side_;
   int bias_match_;
+  int num_label_;
   int num_class_;
   int coords_;
   int num_;
