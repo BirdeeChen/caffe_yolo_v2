@@ -63,7 +63,9 @@ def show_boxes(image, boxes):
     y1 = int(box[2])
     x2 = int(x1 + box[3])
     y2 = int(y1 + box[4])
+    label_id = int(box[0])
     cv2.rectangle(image, (x1, y1), (x2, y2), (0, 0, 255), 2)
+    cv2.putText(image, str(label_id), (x1 + 5, y1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1, 2)
 
   cv2.imshow("out", image)
   cv2.waitKey(0)

@@ -10,6 +10,7 @@ layer {
 
   data_param {  
     source: "lmdb/trainval_lmdb"
+    num_label: 56
     batch_size: 1
     side: 13
     backend: LMDB

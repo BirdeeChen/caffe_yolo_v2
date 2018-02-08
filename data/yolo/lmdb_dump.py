@@ -13,8 +13,6 @@ def parseBoxes(float_label):
         return None
     return float_label.reshape((-1, 5))
 
-
-
 lmdb_env = lmdb.open('lmdb/trainval_lmdb')
 lmdb_txn = lmdb_env.begin()
 lmdb_cursor = lmdb_txn.cursor()
@@ -40,8 +38,11 @@ for key, value in lmdb_cursor:
             y = int(box[1] * height)
             w = int(box[2] * width)
             h = int(box[3] * height)
+            label_id = int(box[4])
             cv2.rectangle(image, (x,y), (x+w,y+h), (255,0,0),2)
-            
+            #my_font = ImageFont.truetype("/usr/share/fonts/truetype/ubuntu-font-family/Ubuntu-M.ttf", size=20)
+            cv2.putText(image, str(label_id), (x + 5, y), cv2.FONT_HERSHEY_SIMPLEX,  1, (0, 0, 255), 1, 2)
+
     cv2.imshow('cv2', image)
     cv2.waitKey(0)
     print('{},{}'.format(key, label))
