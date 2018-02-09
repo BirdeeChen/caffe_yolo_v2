@@ -59,8 +59,8 @@ def show_boxes(image, boxes):
   for box in boxes:
     if box[1] <= 0.0:
       break
-    x1 = int(box[1])
-    y1 = int(box[2])
+    x1 = int(box[1] - box[3]/2)
+    y1 = int(box[2] - box[4]/2)
     x2 = int(x1 + box[3])
     y2 = int(y1 + box[4])
     label_id = int(box[0])

@@ -166,25 +166,20 @@ void BoxDataLayer<Dtype>::transform_label(int count, Dtype* top_label,
   caffe_set(count, Dtype(0), top_label);
 
   for (int i = 0; i < box_labels.size(); ++i) {
-    /*
-    float difficult = box_labels[i].difficult_;
-    if (difficult != 0. && difficult != 1.) {
-      LOG(WARNING) << "Difficult must be 0 or 1";
-    }*/
+
     float class_label = box_labels[i].class_label_;
     CHECK_GE(class_label, 0) << "class_label must >= 0";
-    //float x = box_labels[i].box_[0];
-    //float y = box_labels[i].box_[1];
-    // LOG(INFO) << "x: " << x << " y: " << y;    
-    
+
     int class_index = i * 5 ;
     int cor_index = class_index + 1;
-    
-    // LOG(INFO) << "dif_index: " << dif_index << " class_label: " << class_label;
     top_label[class_index] = class_label;
+
     for (int j = 0; j < 4; ++j) {
       top_label[cor_index + j] = box_labels[i].box_[j];
     }
+    // Reset X, Y as the center of the rectangle
+    top_label[cor_index + 0] += box_labels[i].box_[2] / 2;
+    top_label[cor_index + 1] += box_labels[i].box_[3] / 2;
   }
 }
 
