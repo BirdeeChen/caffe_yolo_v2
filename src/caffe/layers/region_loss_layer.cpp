@@ -322,6 +322,7 @@ void RegionLossLayer<Dtype>::Forward_cpu(
           if (best_iou > thresh_){
             best_num ++;
             diff[index + 4] = 0;
+            avg_anyobj -= swap_data[index + 4];
 
           }
           if (iter < 12800 / bottom[0]->num()){
@@ -386,6 +387,7 @@ void RegionLossLayer<Dtype>::Forward_cpu(
       if (iou > 0.5)recall += 1;
       avg_iou += iou;
       avg_obj += swap_data[best_index + 4];
+      avg_anyobj -= swap_data[best_index + 4];
       diff[best_index + 4] = (-1.0) * object_scale_ * (1 - swap_data[best_index + 4]) * (swap_data[best_index + 4] * (1 - swap_data[best_index + 4]));
 
       if (class_map_ != "") class_label = cls_map_[class_label];	
@@ -414,14 +416,14 @@ void RegionLossLayer<Dtype>::Forward_cpu(
   for (int i = 0; i < real_diff_.count(); ++i)
     loss += real_diff[i] * real_diff[i];
 */
-  caffe_mul<Dtype>(real_diff_.count(), real_diff, real_diff, real_diff);
-  loss = caffe_cpu_asum<Dtype>(real_diff_.count(), real_diff);
+  caffe_mul<Dtype>(real_diff_.count(), diff, diff, diff);
+  loss = caffe_cpu_asum<Dtype>(diff_.count(), diff);
   top[0]->mutable_cpu_data()[0] = loss;
   iter ++;
   //LOG(INFO) << "iter: " << iter <<" loss: " << loss;
   if (!(iter % 100))
   {
-    LOG(INFO) << "avg_noobj: "<< avg_anyobj/(side_*side_*num_*bottom[0]->num()) << " avg_obj: " << avg_obj/count <<" avg_iou: " << avg_iou/count << " avg_cat: " << avg_cat/class_count << " recall: " << recall/count << " class_count: "<< class_count;
+    LOG(INFO) << "avg_noobj: "<< avg_anyobj/(side_*side_*num_*bottom[0]->num()-count) << " avg_obj: " << avg_obj/count <<" avg_iou: " << avg_iou/count << " avg_cat: " << avg_cat/class_count << " recall: " << recall/count << " class_count: "<< class_count;
   }
 }
 
