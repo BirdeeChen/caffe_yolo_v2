@@ -1,45 +1,76 @@
-# Caffe
+# YOLO: Real-Time Object Detection (Caffe)
 
-[![Build Status](https://travis-ci.org/BVLC/caffe.svg?branch=master)](https://travis-ci.org/BVLC/caffe)
-[![License](https://img.shields.io/badge/license-BSD-blue.svg)](LICENSE)
+This is the caffe version YOLO V2 ported directly from [darknet YOLO][1]
 
-Caffe is a deep learning framework made with expression, speed, and modularity in mind.
-It is developed by Berkeley AI Research ([BAIR](http://bair.berkeley.edu))/The Berkeley Vision and Learning Center (BVLC) and community contributors.
+## Detection Using A Pre-Trained VOC Model
 
-Check out the [project site](http://caffe.berkeleyvision.org) for all the details like
+- ### Step 0 *BUILD this reporsitory caffe*
+  ```
+  git clone https://github.com/quhezheng/caffe_yolo_v2
+  cd caffe_yolo_v2
+  mkdir build
+  cd build
+  cmake ..
+  make  
+  ```
 
-- [DIY Deep Learning for Vision with Caffe](https://docs.google.com/presentation/d/1UeKXVgRvvxg9OUdh_UiC5G71UMscNPlvArsWER41PsU/edit#slide=id.p)
-- [Tutorial Documentation](http://caffe.berkeleyvision.org/tutorial/)
-- [BAIR reference models](http://caffe.berkeleyvision.org/model_zoo.html) and the [community model zoo](https://github.com/BVLC/caffe/wiki/Model-Zoo)
-- [Installation instructions](http://caffe.berkeleyvision.org/installation.html)
+- ### Step 1 *Download the trained model from Baidu disk  [https://pan.baidu.com/s/1jJ9emNW][3]*
+  ```
+  cd ..  #back to project root folder
+  cd examples/yolo
+  mkdir model_voc
+  cp DOWNLOAD/PATH/OF/yolo_voc_iter_120000.caffemodel model_voc
+  python detect.py
+  ```
+  ![image](https://github.com/quhezheng/caffe_yolo_v2/blob/master/examples/yolo/demo.jpg)
+    
+    detect.py use **CPU** do do predition by default, please change the script if want **GPU**  
 
-and step-by-step examples.
+## Train the VOC data
 
-## Custom distributions
+- ### Step 0      *Build caffe in [YOUR_LOCAL_REPOSITORY_PATH]/build*
 
- - [Intel Caffe](https://github.com/BVLC/caffe/tree/intel) (Optimized for CPU and support for multi-node), in particular Xeon processors (HSW, BDW, SKX, Xeon Phi).
-- [OpenCL Caffe](https://github.com/BVLC/caffe/tree/opencl) e.g. for AMD or Intel devices.
-- [Windows Caffe](https://github.com/BVLC/caffe/tree/windows)
+- ### Step 1      *Download VOC2007 & 2012 dataset([here][4])* 
+  ```  python
+  cd [YOUR_LOCAL_REPOSITORY_PATH]/data/yolo
+  wget http://pjreddie.com/media/files/VOCtrainval_06-Nov-2007.tar
+  wget http://pjreddie.com/media/files/VOCtest_06-Nov-2007.tar
+  wget http://pjreddie.com/media/files/VOCtrainval_11-May-2012.tar
+  wget http://pjreddie.com/media/files/VOC2012test.tar
+  tar -xvf VOCtest_06-Nov-2007.tar
+  tar -xvf VOCtrainval_06-Nov-2007.tar
+  tar -xvf VOCtrainval_11-May-2012.tar
+  tar -xvf VOC2012test.tar
+  ```  
+  There it will be 'VOCdevkit' folder
 
-## Community
 
-[![Join the chat at https://gitter.im/BVLC/caffe](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/BVLC/caffe?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+- ### Step 2      *Create lmdb index \*.txt files* 
+  ```  
+  python get_list.py
+  ```  
+  There it will be 'trainval.txt test_2007.txt test_2012.txt' files
+     
+- ### Step 3      *Create lmdb* 
+  ```  
+  ./convert.sh
+  ```  
+   There it will be lmdb folder has all lmdb
 
-Please join the [caffe-users group](https://groups.google.com/forum/#!forum/caffe-users) or [gitter chat](https://gitter.im/BVLC/caffe) to ask questions and talk about methods and models.
-Framework development discussions and thorough bug reports are collected on [Issues](https://github.com/BVLC/caffe/issues).
+- ### Step 4 *Download the pre-trained model [darknet19_448.conv.23.caffemodel][2] from Baidu disk*
 
-Happy brewing!
+  This model is converted directly from [darknet darknet19_448.conv.23][5]. It contain trained TOP 23 layers' weight, other layers' weight are initilized by 'xavier'
+  
+  ```  
+  cd ../../examples/yolo
+  cp DOWNLOAD/PATH/OF/darknet19_448.conv.23.caffemodel ./
+  mkdir model_voc
+  ./train_voc.sh
+  ```  
+  
 
-## License and Citation
-
-Caffe is released under the [BSD 2-Clause license](https://github.com/BVLC/caffe/blob/master/LICENSE).
-The BAIR/BVLC reference models are released for unrestricted use.
-
-Please cite Caffe in your publications if it helps your research:
-
-    @article{jia2014caffe,
-      Author = {Jia, Yangqing and Shelhamer, Evan and Donahue, Jeff and Karayev, Sergey and Long, Jonathan and Girshick, Ross and Guadarrama, Sergio and Darrell, Trevor},
-      Journal = {arXiv preprint arXiv:1408.5093},
-      Title = {Caffe: Convolutional Architecture for Fast Feature Embedding},
-      Year = {2014}
-    }
+ [1]: https://pjreddie.com/darknet/yolo
+ [2]: https://pan.baidu.com/s/1qZ32sJ6
+ [3]: https://pan.baidu.com/s/1jJ9emNW
+ [4]: https://pjreddie.com/projects/pascal-voc-dataset-mirror/
+ [5]: https://pjreddie.com/media/files/darknet19_448.conv.23
