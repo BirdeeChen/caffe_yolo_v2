@@ -1,6 +1,10 @@
 ## Predict VOC data by trained model
 - Download the trained model from Baidu disk [https://pan.baidu.com/s/1jJ9emNW][3]
-
+  ```
+  mkdir model_voc
+  cp DOWNLOAD/PATH/OF/yolo_voc_iter_120000.caffemodel model_voc
+  ```
+  
 - Run the script:
 
         python detect.py
