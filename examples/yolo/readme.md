@@ -1,5 +1,5 @@
 ## Predict VOC data by trained model
-- Download the trained model from Baidu disk [https://pan.baidu.com/s/1qZ32sJ6][1]
+- Download the trained model from Baidu disk [https://pan.baidu.com/s/1jJ9emNW][3]
 
 - Run the script:
 
@@ -23,3 +23,4 @@
 
  [1]: https://pan.baidu.com/s/1qZ32sJ6
  [2]: https://pjreddie.com/media/files/darknet19_448.conv.23
+ [3]: https://pan.baidu.com/s/1jJ9emNW
