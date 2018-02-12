@@ -18,14 +18,14 @@ This example show how to convert VOC dataset to lmdb which is consumed by this Y
   tar -xvf VOCtrainval_11-May-2012.tar
   tar -xvf VOC2012test.tar
   ```  
-  You will get 'VOCdevkit' folder
+  There it will be 'VOCdevkit' folder
 
 
 - ### Step 2      *Create lmdb index \*.txt files* 
   ```  
   python get_list.py
   ```  
-  You will get 'trainval.txt test_2007.txt test_2012.txt' files
+  There it will be 'trainval.txt test_2007.txt test_2012.txt' files
      
 - ### Step 3      *Create lmdb* 
   ```  
