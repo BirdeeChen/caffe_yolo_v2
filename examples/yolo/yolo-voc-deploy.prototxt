@@ -1052,7 +1052,7 @@ layer {
     detection_output_param {
         classes: 20
         confidence_threshold: 0.2
-        nms_threshold: 0.45
+        nms_threshold: 0.40
         biases: 1.08
         biases: 1.19
         biases: 3.42

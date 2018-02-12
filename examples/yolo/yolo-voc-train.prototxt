@@ -11,13 +11,11 @@ layer {
   transform_param {
     mirror: false
     force_color: true
-    mean_value: 104
-    mean_value: 117
-    mean_value: 123
+    scale: 0.00390625
   }
   data_param {
     source: "../../data/yolo/lmdb/trainval_lmdb"
-    batch_size: 4
+    batch_size: 5
     side: 13
     num_label: 56
     backend: LMDB
