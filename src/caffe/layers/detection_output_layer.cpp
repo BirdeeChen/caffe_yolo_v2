@@ -119,7 +119,16 @@ void DetectionOutputLayer<Dtype>::Forward_cpu(
 	  	results.push_back(predicts[idxes[i]]);
       }    
     }
-  
+/*
+    for(int p = 0; p < predicts.size(); p++)
+    {
+    	LOG(INFO) << "predict " << p << ": classType=" <<predicts[p].classType <<" confidence="<< predicts[p].confidence;
+    }
+    for(int p = 0; p < idxes.size(); p++)
+    {
+    	LOG(INFO) << "kept :" << p;
+    }
+  */
   vector<int> top_shape(2, 1);
   top_shape.push_back(results.size());
   top_shape.push_back(7);

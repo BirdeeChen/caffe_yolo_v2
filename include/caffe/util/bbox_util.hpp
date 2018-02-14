@@ -209,7 +209,7 @@ void get_region_box(Dtype* x, PredictionResult<Dtype>& predict, vector<Dtype> bi
 template <typename Dtype>
 void ApplyNms(vector< PredictionResult<Dtype> >& boxes, vector<int>& idxes, Dtype threshold) {
   idxes.clear();
-  for (int i = 0; i < boxes.size() - 1; ++i) {
+  for (int i = 0; i < boxes.size(); ++i) {
     if (boxes[i].objScore < 0.0)
       continue;
    
@@ -231,7 +231,7 @@ void ApplyNms(vector< PredictionResult<Dtype> >& boxes, vector<int>& idxes, Dtyp
     }
   }
 	
-  for (int i = 0; i < boxes.size() - 1; ++i) {
+  for (int i = 0; i < boxes.size(); ++i) {
     if (boxes[i].objScore > 0.0)
 		idxes.push_back(i);
   }
